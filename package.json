@@ -2,17 +2,17 @@
 	"name": "sidebar-project-md-notes",
 	"displayName": "Sidebar Project MD Notes",
 	"description": "Markdown notes in the sidebar, synced with your project files",
-	"version": "1.0.0",
+	"version": "1.0.2",
 	"publisher": "JimmyStridh",
 	"author": {
 		"email": "sidebar-project-md-notes-vsix@stridh.nu",
-		"name": "Matheus Assis Rios",
-		"url": "https://github.com/AssisrMatheus"
+		"name": "Jimmy Stridh",
+		"url": "https://github.com/JimmyStridh"
 	},
 	"license": "GPL-3.0-or-later",
 	"icon": "images/icon.png",
 	"repository": {
-		"url": "https://www.github.com/AssisrMatheus/sidebar-markdown-notes",
+		"url": "https://www.github.com/JimmyStridh/sidebar-markdown-notes",
 		"type": "git"
 	},
 	"keywords": [

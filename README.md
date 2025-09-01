@@ -1,12 +1,12 @@
 # Sidebar-Project-MD-Notes
 
-[![Marketplace Version](images/icon.png 'Current Release')]()
+[![Marketplace Version](https://i.imgur.com/uYoZeB8.png 'Current Release')]()
 
 Take markdown notes directly in the sidebar, synced with your project files.
 
 > **Note**: This is a fork of [sidebar-markdown-notes](https://github.com/AssisrMatheus/sidebar-markdown-notes) with enhanced project-based file storage and click-to-edit functionality.
 
-![screenshot](images/screenshot.png)
+![screenshot](https://i.imgur.com/ZD8pHzF.png)
 
 - **Project-based notes**: Notes are stored as `.project-notes.md` in your workspace root
 - **GitHub Flavored Markdown Support**: Full GFM support including checklists
