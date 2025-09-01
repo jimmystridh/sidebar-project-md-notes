@@ -27,20 +27,13 @@
     }, secondsToHide || 3000);
   };
 
-  const welcomeMessage =
-    '# Welcome to `sidebar-markdown-notes`\n\nStart by typing **markdown**.\n\nClick the `Toggle preview` button to view your notes\n\nAlso works with GitHub Flavored Markdown ✨✨\n- [ ] Start by  \n- [ ] creating your own  \n- [x] checklists!  \n\nOr any kind of markdown\n\n- Your imagination  \n- Is the limit';
-
-  const initialState = {
-    state: 'editor',
-    currentPage: 0,
-    pages: [welcomeMessage],
-    version: 1
+  // Current state - simplified for single file mode
+  let currentState = {
+    state: 'render',
+    content: ''
   };
 
-  // Gets the state or creates a new one if it doesn't exist
-  let currentState = vscode.getState() || initialState;
-
-  // Set the options for the maked markdown parser
+  // Set the options for the marked markdown parser
   marked.setOptions({
     gfm: true,
     breaks: true
@@ -69,15 +62,12 @@
     const renderElement = document.getElementById('render');
     const editorElement = document.getElementById('content');
 
-    // Gets the latest markdown content
-    const content = currentState.pages[currentState.currentPage];
-
     switch (currentState.state) {
       case 'render': {
         // If we want to render the markdown
 
         // Grab the html for the markdown
-        renderElement.innerHTML = DOMPurify.sanitize(marked(content || ''));
+        renderElement.innerHTML = DOMPurify.sanitize(marked(currentState.content || ''));
 
         if (renderElement.classList.contains('hidden')) {
           renderElement.classList.remove('hidden');
@@ -87,34 +77,43 @@
         document.querySelectorAll(`input[type='checkbox']`).forEach((check) => {
           // So we can lookup the checkbox in the markdown content
           const content = check.parentElement.textContent.trim();
-          const getIsChecked = () => currentState.pages[currentState.currentPage].includes(`- [x] ${content}`);
+          const getIsChecked = () => currentState.content.includes(`- [x] ${content}`);
 
           // Ensure the checkbox state matches what is in the latest markdown
           check.checked = getIsChecked();
 
-          check.addEventListener('click', () => {
+          check.addEventListener('click', (event) => {
+            // Prevent the click from bubbling up to trigger edit mode
+            event.stopPropagation();
+            
             const checked = getIsChecked();
 
             // Update the markdown to use the new checked state
             // Best to just rely on the markdown as the source of truth rather
             // than trying to juggle some internal state for the checkbox
-            const newPageContent = checked
+            const newContent = checked
               ? // Was checked - should now uncheck
-                currentState.pages[currentState.currentPage].replaceAll(`- [x] ${content}`, `- [ ] ${content}`)
+                currentState.content.replaceAll(`- [x] ${content}`, `- [ ] ${content}`)
               : // Was not checked - should now check
-                currentState.pages[currentState.currentPage].replaceAll(`- [ ] ${content}`, `- [x] ${content}`);
+                currentState.content.replaceAll(`- [ ] ${content}`, `- [x] ${content}`);
 
-            let newState = {
-              ...currentState,
-              pages: [
-                ...currentState.pages.slice(0, currentState.currentPage),
-                newPageContent,
-                ...currentState.pages.slice(currentState.currentPage + 1)
-              ]
-            };
-
-            saveState(newState);
+            currentState.content = newContent;
+            saveContentToFile();
+            renderView();
           });
+        });
+
+        // Add click event listener to render element to switch to edit mode
+        renderElement.addEventListener('click', () => {
+          currentState.state = 'editor';
+          renderView();
+          // Focus the text input after switching to edit mode
+          setTimeout(() => {
+            const textInput = document.getElementById('text-input');
+            if (textInput) {
+              textInput.focus();
+            }
+          }, 0);
         });
         break;
       }
@@ -125,7 +124,7 @@
         const editorTextArea = document.getElementById('text-input');
 
         // Put the value in the input
-        editorTextArea.value = content || '';
+        editorTextArea.value = currentState.content || '';
 
         if (editorElement.classList.contains('hidden')) {
           editorElement.classList.remove('hidden');
@@ -136,122 +135,81 @@
     }
   };
 
-  const saveState = (newState) => {
-    // Save the state
-    vscode.setState(newState);
-    // Updates current instance
-    currentState = newState;
-
-    renderView();
+  const saveContentToFile = () => {
+    // Save current content to file via extension
+    vscode.postMessage({ type: 'saveContent', value: currentState.content });
   };
 
-  const getUpdatedContent = () => {
-    let newState = { ...currentState };
-
-    switch (currentState.state) {
-      case 'render': {
-        break;
-      }
-      case 'editor': {
-        // If the current state is the editor
-
-        // Get the editor text area
-        const editorTextArea = document.getElementById('text-input');
-
-        // Updates the value in state only if they're different
-        if (editorTextArea.value !== newState.pages[newState.currentPage]) {
-          // Make a state with the typed in value
-          newState = {
-            ...newState,
-            pages: [
-              ...newState.pages.slice(0, newState.currentPage),
-              editorTextArea.value,
-              ...newState.pages.slice(newState.currentPage + 1)
-            ]
-          };
-        }
-
-        break;
-      }
+  const getCurrentContent = () => {
+    if (currentState.state === 'editor') {
+      const editorTextArea = document.getElementById('text-input');
+      return editorTextArea.value;
     }
-
-    return newState;
+    return currentState.content;
   };
 
-  const debouncedSaveContent = _.debounce(() => saveState(getUpdatedContent()), 300, {
-    maxWait: 500
+  const debouncedSaveContent = _.debounce(() => {
+    const newContent = getCurrentContent();
+    // Only save if content has actually changed
+    if (currentState.content !== newContent) {
+      currentState.content = newContent;
+      saveContentToFile();
+    }
+  }, 500, {
+    maxWait: 1000
   });
 
-  const togglePreview = () => {
-    // Grabs the new state
-    let newState = { ...getUpdatedContent(), state: currentState.state === 'editor' ? 'render' : 'editor' };
-    saveState(newState);
-  };
 
-  const exportPage = () => {
-    // Update state and get current page's content
-    let newState = getUpdatedContent();
-    saveState(newState);
-    const content = newState.pages[newState.currentPage];
-    // Reply to extension with the text
-    vscode.postMessage({ type: 'exportPage', value: content });
-  };
-
-  const previousPage = () => {
-    if (currentState.currentPage > 0) {
-      let newState = { ...getUpdatedContent(), currentPage: currentState.currentPage - 1 };
-
-      saveState(newState);
-
-      updateStatusForSeconds(`$(file) Page ${newState.currentPage + 1}`);
-    } else {
-      updateStatusForSeconds(`$(file) Page ${currentState.currentPage + 1}`);
-      log(`You're already at the first page`);
+  const loadContent = (content) => {
+    // Only update if content has actually changed
+    if (currentState.content === content) {
+      return; // Skip update if content is identical
     }
-  };
 
-  const nextPage = () => {
-    if (currentState.currentPage <= 999) {
-      const newPageIndex = Number(currentState.currentPage) + 1;
-
-      let newState = {
-        ...getUpdatedContent(),
-        currentPage: newPageIndex
-      };
-
-      if (!currentState.pages[newPageIndex]) {
-        newState = { ...newState, pages: [...newState.pages, `Page ${newPageIndex + 1}\n${welcomeMessage}`] };
+    // Preserve cursor position and selection if in editor mode
+    let cursorStart = 0;
+    let cursorEnd = 0;
+    let shouldRestoreCursor = false;
+    
+    if (currentState.state === 'editor') {
+      const editorTextArea = document.getElementById('text-input');
+      if (editorTextArea === document.activeElement) {
+        cursorStart = editorTextArea.selectionStart;
+        cursorEnd = editorTextArea.selectionEnd;
+        shouldRestoreCursor = true;
       }
-
-      saveState(newState);
-
-      updateStatusForSeconds(`$(file) Page ${newPageIndex + 1}`);
     }
+
+    currentState.content = content;
+    renderView();
+
+    // Restore cursor position after update
+    if (shouldRestoreCursor && currentState.state === 'editor') {
+      const editorTextArea = document.getElementById('text-input');
+      // Use setTimeout to ensure the DOM has been updated
+      setTimeout(() => {
+        editorTextArea.setSelectionRange(cursorStart, cursorEnd);
+        editorTextArea.focus();
+      }, 0);
+    }
+  };
+
+  const resetData = () => {
+    currentState.content = '';
+    renderView();
   };
 
   // Handle messages sent from the extension to the webview
   window.addEventListener('message', (event) => {
     const message = event.data; // The json data that the extension sent
     switch (message.type) {
-      case 'togglePreview': {
-        // If the editor sends a togglePreview message
-        togglePreview();
-        break;
-      }
-      case 'previousPage': {
-        previousPage();
-        break;
-      }
-      case 'nextPage': {
-        nextPage();
+      case 'loadContent': {
+        // Load content from file
+        loadContent(message.value);
         break;
       }
       case 'resetData': {
-        saveState(initialState);
-        break;
-      }
-      case 'exportPage': {
-        exportPage();
+        resetData();
         break;
       }
     }
@@ -267,6 +225,18 @@
   document.getElementById('text-input').addEventListener('input', () => {
     debouncedSaveContent();
   });
+
+  document.getElementById('text-input').addEventListener('blur', () => {
+    // Switch back to render mode when the text input loses focus
+    if (currentState.state === 'editor') {
+      currentState.content = getCurrentContent();
+      currentState.state = 'render';
+      renderView();
+    }
+  });
+
+  // Load initial content from extension
+  vscode.postMessage({ type: 'loadContent' });
 
   // Runs the render for the first time
   renderView();

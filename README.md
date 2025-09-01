@@ -1,18 +1,27 @@
-# sidebar-markdown-notes
+# Sidebar-Project-MD-Notes
 
-[![Marketplace Version](images/icon.png 'Current Release')](https://marketplace.visualstudio.com/items?itemName=assisrMatheus.sidebar-markdown-notes)
+[![Marketplace Version](images/icon.png 'Current Release')]()
 
-Write down notes directly in the sidebar using markdown.
+Take markdown notes directly in the sidebar, synced with your project files.
 
-![demonstration](https://i.imgur.com/O5Tepg8.gif)
+> **Note**: This is a fork of [sidebar-markdown-notes](https://github.com/AssisrMatheus/sidebar-markdown-notes) with enhanced project-based file storage and click-to-edit functionality.
 
-- Multiple pages
-- Github Flavored Markdown Support
-- The notes are saved when you close the editor
+![screenshot](images/screenshot.png)
+
+- **Project-based notes**: Notes are stored as `.project-notes.md` in your workspace root
+- **GitHub Flavored Markdown Support**: Full GFM support including checklists
+- **Auto-save**: Notes are automatically saved to your project file
+- **File watching**: Changes to `.project-notes.md` are automatically reflected in the sidebar
+- **Click-to-edit**: Click on rendered markdown to switch to edit mode
+- **Open in editor**: Button to open `.project-notes.md` directly in VS Code editor
+
+## How it works
+
+When you open a workspace folder, the extension creates and manages a `.project-notes.md` file in the root of your workspace. This file contains all your project notes and is automatically synced with the sidebar interface.
 
 ## Available configurations
 
-- `sidebar-markdown-notes.leftMargin`: Adds a left margin to the entire view so it aligns with other content in the sidebar.
+- `sidebar-project-md-notes.leftMargin`: Adds a left margin to the entire view so it aligns with other content in the sidebar.
 
 ---
 

@@ -1,11 +1,11 @@
 {
-	"name": "sidebar-markdown-notes",
-	"displayName": "sidebar-markdown-notes",
-	"description": "Take notes in your sidebar using markdown",
-	"version": "1.2.0",
-	"publisher": "assisrMatheus",
+	"name": "sidebar-project-md-notes",
+	"displayName": "Sidebar Project MD Notes",
+	"description": "Markdown notes in the sidebar, synced with your project files",
+	"version": "1.0.0",
+	"publisher": "JimmyStridh",
 	"author": {
-		"email": "assisr.matheus@gmail.com",
+		"email": "sidebar-project-md-notes-vsix@stridh.nu",
 		"name": "Matheus Assis Rios",
 		"url": "https://github.com/AssisrMatheus"
 	},
@@ -36,83 +36,48 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:sidebar-markdown-notes.resetData",
-		"onCommand:sidebar-markdown-notes.previousPage",
-		"onCommand:sidebar-markdown-notes.nextPage",
-		"onCommand:sidebar-markdown-notes.togglePreview",
-		"onView:sidebarMarkdownNotes.webview"
+		"onCommand:sidebar-project-md-notes.resetData",
+		"onCommand:sidebar-project-md-notes.openNotesFile",
+		"onView:sidebarProjectMdNotes.webview"
 	],
-	"main": "./dist/extension.js",
+	"main": "./out/extension.js",
 	"contributes": {
 		"views": {
 			"explorer": [
 				{
 					"type": "webview",
-					"id": "sidebarMarkdownNotes.webview",
-					"name": "Sidebar markdown notes"
+					"id": "sidebarProjectMdNotes.webview",
+					"name": "Project Notes"
 				}
 			]
 		},
 		"commands": [
 			{
-				"command": "sidebar-markdown-notes.resetData",
-				"category": "Sidebar markdown notes",
-				"title": "Reset data"
+				"command": "sidebar-project-md-notes.resetData",
+				"category": "Project Notes",
+				"title": "Reset notes"
 			},
 			{
-				"command": "sidebar-markdown-notes.previousPage",
-				"category": "Sidebar markdown notes",
-				"title": "Previous page",
-				"icon": "$(arrow-left)"
-			},
-			{
-				"command": "sidebar-markdown-notes.nextPage",
-				"category": "Sidebar markdown notes",
-				"title": "Next page",
-				"icon": "$(arrow-right)"
-			},
-			{
-				"command": "sidebar-markdown-notes.togglePreview",
-				"category": "Sidebar markdown notes",
-				"title": "Toggle preview",
-				"icon": "$(open-preview)"
-			},
-			{
-				"command": "sidebar-markdown-notes.exportPage",
-				"category": "Sidebar markdown notes",
-				"title": "Export page",
-				"icon": "$(symbol-reference)"
+				"command": "sidebar-project-md-notes.openNotesFile",
+				"category": "Project Notes",
+				"title": "Open notes file",
+				"icon": "$(go-to-file)"
 			}
 		],
 		"menus": {
 			"view/title": [
 				{
-					"command": "sidebar-markdown-notes.previousPage",
+					"command": "sidebar-project-md-notes.openNotesFile",
 					"group": "navigation@0",
-					"when": "view == sidebarMarkdownNotes.webview"
-				},
-				{
-					"command": "sidebar-markdown-notes.nextPage",
-					"group": "navigation@1",
-					"when": "view == sidebarMarkdownNotes.webview"
-				},
-				{
-					"command": "sidebar-markdown-notes.togglePreview",
-					"group": "navigation@2",
-					"when": "view == sidebarMarkdownNotes.webview"
-				},
-				{
-					"command": "sidebar-markdown-notes.exportPage",
-					"group": "navigation@3",
-					"when": "view == sidebarMarkdownNotes.webview"
+					"when": "view == sidebarProjectMdNotes.webview"
 				}
 			]
 		},
 		"configuration": [
 			{
-				"title": "Sidebar markdown notes",
+				"title": "Project Notes",
 				"properties": {
-					"sidebar-markdown-notes.leftMargin": {
+					"sidebar-project-md-notes.leftMargin": {
 						"type": "boolean",
 						"default": false,
 						"description": "Whether or not a left margin should be added to the main view. To align it with other elements"
@@ -122,16 +87,17 @@
 		]
 	},
 	"scripts": {
-		"vscode:prepublish": "webpack --mode production",
+		"vscode:prepublish": "npm run compile",
 		"webpack": "webpack --mode development",
 		"webpack-dev": "webpack --mode development --watch",
 		"test-compile": "tsc -p ./",
 		"compile": "tsc -p ./",
 		"lint": "eslint src --ext ts",
-		"watch": "webpack --mode development --watch",
+		"watch": "tsc -p ./ --watch",
 		"pretest": "npm run compile && npm run lint",
 		"test": "node ./out/test/runTest.js",
-		"deploy": "vsce publish --yarn"
+		"deploy": "npx @vscode/vsce publish",
+		"package": "npx @vscode/vsce package"
 	},
 	"devDependencies": {
 		"@types/glob": "^7.1.3",
@@ -141,24 +107,24 @@
 		"@types/vscode": "^1.50.0",
 		"@typescript-eslint/eslint-plugin": "^4.1.1",
 		"@typescript-eslint/parser": "^4.1.1",
+		"@vscode/vsce": "^3.6.0",
 		"eslint": "^7.9.0",
 		"eslint-config-airbnb-base": "^14.2.0",
 		"eslint-config-prettier": "^6.15.0",
 		"eslint-plugin-import": "^2.22.1",
 		"eslint-plugin-prettier": "^3.1.4",
 		"glob": "^7.1.6",
-		"mocha": "^8.1.3",
+		"mocha": "^11.7.2",
 		"prettier": "^2.1.2",
 		"ts-loader": "^8.0.11",
 		"typescript": "^4.0.2",
-		"vsce": "^1.81.1",
 		"vscode-test": "^1.4.0",
 		"webpack": "^5.4.0",
 		"webpack-cli": "^4.2.0"
 	},
 	"dependencies": {
-		"dompurify": "^2.2.0",
-		"lodash": "^4.17.20",
-		"marked": "^1.2.2"
+		"dompurify": "^3.2.6",
+		"lodash": "^4.17.21",
+		"marked": "^16.2.1"
 	}
 }

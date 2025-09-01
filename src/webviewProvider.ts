@@ -1,17 +1,123 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { getConfig } from './config';
 
-export default class SidebarMarkdownNotesProvider implements vscode.WebviewViewProvider {
-  public static readonly viewId = 'sidebarMarkdownNotes.webview';
+export default class SidebarProjectMdNotesProvider implements vscode.WebviewViewProvider {
+  public static readonly viewId = 'sidebarProjectMdNotes.webview';
+  private static readonly fileName = '.project-notes.md';
 
   private _view?: vscode.WebviewView;
-
   private config = getConfig();
+  private _fileWatcher?: vscode.FileSystemWatcher;
+  private _isWriting = false;
 
-  constructor(private readonly _extensionUri: vscode.Uri, private _statusBar?: vscode.StatusBarItem) {}
+  constructor(private readonly _extensionUri: vscode.Uri, private _statusBar?: vscode.StatusBarItem) {
+    // Set up file watcher for the notes file
+    this._setupFileWatcher();
+
+    // Listen for workspace folder changes
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      this._setupFileWatcher();
+      this._refreshWebview();
+    });
+  }
+
+  private _setupFileWatcher() {
+    // Dispose existing watcher
+    if (this._fileWatcher) {
+      this._fileWatcher.dispose();
+    }
+
+    const workspaceFolder = this._getWorkspaceFolder();
+    if (workspaceFolder) {
+      const pattern = new vscode.RelativePattern(workspaceFolder, SidebarProjectMdNotesProvider.fileName);
+
+      this._fileWatcher = vscode.workspace.createFileSystemWatcher(pattern);
+
+      this._fileWatcher.onDidChange(() => {
+        if (!this._isWriting) {
+          this._refreshWebview();
+        }
+      });
+
+      this._fileWatcher.onDidCreate(() => {
+        this._refreshWebview();
+      });
+
+      this._fileWatcher.onDidDelete(() => {
+        this._refreshWebview();
+      });
+    }
+  }
+
+  private _getWorkspaceFolder(): vscode.WorkspaceFolder | undefined {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (workspaceFolders && workspaceFolders.length > 0) {
+      return workspaceFolders[0]; // Use first workspace folder
+    }
+    return undefined;
+  }
+
+  private _getNotesFilePath(): string | undefined {
+    const workspaceFolder = this._getWorkspaceFolder();
+    if (workspaceFolder) {
+      return path.join(workspaceFolder.uri.fsPath, SidebarProjectMdNotesProvider.fileName);
+    }
+    return undefined;
+  }
+
+  private async _readNotesFromFile(): Promise<string> {
+    const filePath = this._getNotesFilePath();
+    if (!filePath) {
+      return 'No workspace folder open. Please open a folder to use Project Notes.';
+    }
+
+    try {
+      if (fs.existsSync(filePath)) {
+        return fs.readFileSync(filePath, 'utf8');
+      } else {
+        return '# Project Notes\n\nStart by typing **markdown**.\n\nYour notes are automatically rendered in the sidebar.\n\nAlso works with GitHub Flavored Markdown ✨✨\n- [ ] Start by  \n- [ ] creating your own  \n- [x] checklists!  \n\nOr any kind of markdown\n\n- Your imagination  \n- Is the limit';
+      }
+    } catch (error) {
+      console.error('Error reading notes file:', error);
+      return 'Unable to read notes file. Please check if the workspace is accessible.';
+    }
+  }
+
+  private async _writeNotesToFile(content: string): Promise<void> {
+    const filePath = this._getNotesFilePath();
+    if (!filePath) {
+      vscode.window.showErrorMessage('No workspace folder open. Cannot save notes.');
+      return;
+    }
+
+    try {
+      this._isWriting = true;
+      fs.writeFileSync(filePath, content, 'utf8');
+      // Brief delay to ensure the file system event is processed before we reset the flag
+      setTimeout(() => {
+        this._isWriting = false;
+      }, 100);
+    } catch (error) {
+      this._isWriting = false;
+      console.error('Error writing notes file:', error);
+      vscode.window.showErrorMessage('Unable to save notes. Please check file permissions and disk space.');
+    }
+  }
+
+  private _refreshWebview() {
+    if (this._view) {
+      this._readNotesFromFile().then((content) => {
+        if (this._view) {
+          this._view.webview.postMessage({ type: 'loadContent', value: content });
+        }
+      });
+    }
+  }
 
   /**
    * Revolves a webview view.
@@ -32,69 +138,126 @@ export default class SidebarMarkdownNotesProvider implements vscode.WebviewViewP
     webviewView.webview.options = {
       // Allow scripts in the webview
       enableScripts: true,
-      localResourceRoots: [this._extensionUri]
+      localResourceRoots: [this._extensionUri],
+      enableCommandUris: false
     };
 
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-    webviewView.webview.onDidReceiveMessage((data) => {
+    // Load initial content
+    this._refreshWebview();
+
+    webviewView.webview.onDidReceiveMessage(async (data) => {
+      // Input validation
+      if (!data || typeof data.type !== 'string') {
+        console.error('Invalid message received: missing or invalid type');
+        return;
+      }
+
+      // Validate and sanitize string inputs
+      const sanitizeString = (input: any): string => {
+        if (typeof input !== 'string') {
+          return '';
+        }
+        // Limit length to prevent DoS
+        if (input.length > 1000000) {
+          return input.substring(0, 1000000);
+        }
+        return input;
+      };
+
       switch (data.type) {
         case 'log': {
-          vscode.window.showInformationMessage(`${data.value}`);
+          const message = sanitizeString(data.value);
+          if (message) {
+            vscode.window.showInformationMessage(message);
+          }
           break;
         }
         case 'updateStatusBar': {
-          this.updateStatusBar(data.value);
+          const status = sanitizeString(data.value);
+          this.updateStatusBar(status);
           break;
         }
-        case 'exportPage': {
-          vscode.workspace.openTextDocument({ language: 'markdown' }).then((a: vscode.TextDocument) => {
-            vscode.window.showTextDocument(a, 1, false).then((e) => {
-              e.edit((edit) => {
-                edit.insert(new vscode.Position(0, 0), data.value);
-              });
-            });
-          });
+        case 'saveContent': {
+          const content = sanitizeString(data.value);
+          await this._writeNotesToFile(content);
+          break;
+        }
+        case 'loadContent': {
+          const content = await this._readNotesFromFile();
+          webviewView.webview.postMessage({ type: 'loadContent', value: content });
+          break;
+        }
+        case 'openNotesFile': {
+          this.openNotesFile();
+          break;
+        }
+        default: {
+          console.error(`Unknown message type: ${data.type}`);
           break;
         }
       }
     });
 
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('sidebar-markdown-notes')) {
+      if (e.affectsConfiguration('sidebar-project-md-notes')) {
         this.config = getConfig();
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
       }
     });
   }
 
-  public resetData() {
-    if (this._view) {
-      this._view.webview.postMessage({ type: 'resetData' });
+  public async resetData() {
+    const filePath = this._getNotesFilePath();
+    if (!filePath) {
+      vscode.window.showErrorMessage('No workspace folder open.');
+      return;
+    }
+
+    const response = await vscode.window.showWarningMessage(
+      'Are you sure you want to reset the project notes? This will delete the .project-notes.md file.',
+      'Yes, reset',
+      'Cancel'
+    );
+
+    if (response === 'Yes, reset') {
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        this._refreshWebview();
+        vscode.window.showInformationMessage('Project notes have been reset.');
+      } catch (error) {
+        console.error('Error resetting notes:', error);
+        vscode.window.showErrorMessage('Unable to reset notes. Please check file permissions.');
+      }
     }
   }
 
-  public togglePreview() {
-    if (this._view) {
-      this._view.webview.postMessage({ type: 'togglePreview' });
-    }
-  }
+  public async openNotesFile() {
+    const filePath = this._getNotesFilePath();
 
-  public previousPage() {
-    if (this._view) {
-      this._view.webview.postMessage({ type: 'previousPage' });
+    if (!filePath) {
+      vscode.window.showErrorMessage('No workspace folder open. Cannot open notes file.');
+      return;
     }
-  }
 
-  public nextPage() {
-    if (this._view) {
-      this._view.webview.postMessage({ type: 'nextPage' });
-    }
-  }
+    try {
+      // Ensure the file exists first
+      if (!fs.existsSync(filePath)) {
+        // Create the file with default content if it doesn't exist
+        const defaultContent =
+          '# Project Notes\n\nStart by typing **markdown**.\n\nYour notes are automatically rendered in the sidebar.\n\nAlso works with GitHub Flavored Markdown ✨✨\n- [ ] Start by  \n- [ ] creating your own  \n- [x] checklists!  \n\nOr any kind of markdown\n\n- Your imagination  \n- Is the limit';
+        fs.writeFileSync(filePath, defaultContent, 'utf8');
+      }
 
-  public exportPage() {
-    if (this._view) {
-      this._view.webview.postMessage({ type: 'exportPage' });
+      // Open the file in the editor
+      const document = await vscode.workspace.openTextDocument(filePath);
+      await vscode.window.showTextDocument(document);
+    } catch (error) {
+      console.error('Error opening notes file:', error);
+      vscode.window.showErrorMessage('Unable to open notes file. Please check file permissions.');
     }
   }
 
@@ -132,27 +295,27 @@ export default class SidebarMarkdownNotesProvider implements vscode.WebviewViewP
       leftMargin: this.config.leftMargin
     });
 
-    return `<!DOCTYPE html>
-			<html lang="en">
-			<head>
-				<meta charset="UTF-8">
+    const cspContent = `default-src 'none'; img-src ${webview.cspSource} https: data:; script-src 'nonce-${nonce}'; style-src ${webview.cspSource} 'unsafe-inline';`;
 
-				<!--
-					Use a content security policy to only allow loading images from https or from our extension directory,
-					and only allow scripts that have a specific nonce.
-				-->
-				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${
-          webview.cspSource
-        }; script-src 'nonce-${nonce}';">
+    const htmlContent = `<!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
 
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <!--
+                    Use a content security policy to only allow loading images from https or from our extension directory,
+                    and only allow scripts that have a specific nonce.
+                -->
+                <meta http-equiv="Content-Security-Policy" content="${cspContent}">
+
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
         <link href="${styleResetUri}" rel="stylesheet">
         <link href="${styleVSCodeUri}" rel="stylesheet">
         <link href="${markdownCss}" rel="stylesheet">
 				<link href="${styleMainUri}" rel="stylesheet">
 
-				<title>Sidebar markdown notes</title>
+				<title>Project Notes</title>
 			</head>
       <body>
 
@@ -175,6 +338,8 @@ export default class SidebarMarkdownNotesProvider implements vscode.WebviewViewP
 				<script nonce="${nonce}" src="${scriptUri}"></script>
 			</body>
 			</html>`;
+
+    return htmlContent;
   }
 
   private _getNonce() {
@@ -184,5 +349,11 @@ export default class SidebarMarkdownNotesProvider implements vscode.WebviewViewP
       text += possible.charAt(Math.floor(Math.random() * possible.length));
     }
     return text;
+  }
+
+  dispose() {
+    if (this._fileWatcher) {
+      this._fileWatcher.dispose();
+    }
   }
 }

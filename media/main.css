@@ -29,3 +29,12 @@ body {
   right: 0;
   left: 0;
 }
+
+#render {
+  cursor: text;
+  transition: background-color 0.2s ease;
+}
+
+#render:hover {
+  background-color: var(--vscode-editor-hoverHighlightBackground, rgba(255, 255, 255, 0.05));
+}
