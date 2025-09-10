@@ -222,11 +222,42 @@
     }
   });
 
-  document.getElementById('text-input').addEventListener('input', () => {
+  // Comprehensive event handling for text input to ensure all changes are captured
+  const textInput = document.getElementById('text-input');
+  
+  // Main input event (handles typing)
+  textInput.addEventListener('input', () => {
+    debouncedSaveContent();
+  });
+  
+  // Explicitly handle paste events
+  textInput.addEventListener('paste', () => {
+    // Use setTimeout to ensure the pasted content is in the DOM
+    setTimeout(() => {
+      debouncedSaveContent();
+    }, 0);
+  });
+  
+  // Handle cut events
+  textInput.addEventListener('cut', () => {
+    setTimeout(() => {
+      debouncedSaveContent();
+    }, 0);
+  });
+  
+  // Handle drop events (drag and drop text)
+  textInput.addEventListener('drop', () => {
+    setTimeout(() => {
+      debouncedSaveContent();
+    }, 0);
+  });
+  
+  // Handle programmatic changes that might not trigger input event
+  textInput.addEventListener('change', () => {
     debouncedSaveContent();
   });
 
-  document.getElementById('text-input').addEventListener('blur', () => {
+  textInput.addEventListener('blur', () => {
     // Switch back to render mode when the text input loses focus
     if (currentState.state === 'editor') {
       currentState.content = getCurrentContent();
