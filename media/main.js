@@ -260,7 +260,12 @@
   textInput.addEventListener('blur', () => {
     // Switch back to render mode when the text input loses focus
     if (currentState.state === 'editor') {
-      currentState.content = getCurrentContent();
+      const newContent = getCurrentContent();
+      // Save if content has changed
+      if (currentState.content !== newContent) {
+        currentState.content = newContent;
+        saveContentToFile();
+      }
       currentState.state = 'render';
       renderView();
     }
