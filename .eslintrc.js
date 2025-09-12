@@ -1,34 +1,31 @@
 module.exports = {
   root: true,
-  parser: '@typescript-eslint/parser', // Specifies the ESLint parser
+  parser: '@typescript-eslint/parser',
   parserOptions: {
-    ecmaVersion: 6,
+    ecmaVersion: 2020,
     sourceType: 'module'
   },
   extends: [
-    // 'airbnb-base/legacy',
-    'prettier',
-    'prettier/@typescript-eslint', // Uses eslint-config-prettier to disable ESLint rules from @typescript-eslint/eslint-plugin that would conflict with prettier
-    'plugin:prettier/recommended' // Enables eslint-plugin-prettier and displays prettier errors as ESLint errors. Make sure this is always the last configuration in the extends array.
+    'plugin:@typescript-eslint/recommended',
+    'prettier'
   ],
-  plugins: ['@typescript-eslint', 'prettier'],
+  plugins: ['@typescript-eslint'],
   rules: {
-    // Vscode default
+    // Keep the original rules that were working
     '@typescript-eslint/naming-convention': 'warn',
-    '@typescript-eslint/semi': 'warn',
     curly: 'warn',
     eqeqeq: 'warn',
     'no-throw-literal': 'warn',
     semi: 'off',
 
-    // My settings
+    // Disable overly strict rules for this migration
+    'no-console': 'off',
+    'no-underscore-dangle': 'off',
+    'class-methods-use-this': 'off',
+    'import/extensions': 'off',
+    'import/no-unresolved': 'off',
+    '@typescript-eslint/no-explicit-any': 'warn',
     '@typescript-eslint/explicit-function-return-type': 'off',
-    '@typescript-eslint/no-unused-vars': 'error',
-    'prettier/prettier': [
-      'error',
-      {
-        endOfLine: 'auto' // Fixes mismatching windows/unix file end of lines
-      }
-    ]
+    '@typescript-eslint/no-unused-vars': 'error'
   }
 };

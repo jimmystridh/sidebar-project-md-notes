@@ -48,6 +48,8 @@ This is a VS Code extension that provides project-specific markdown note-taking 
 
 **Error Handling**: Gracefully handles cases where no workspace folder is open or file operations fail.
 
+**View Container Configuration**: Extension supports configurable view location - can appear in either Explorer or Source Control sidebar. Location is controlled by `sidebar-project-md-notes.viewLocation` setting with "scm" as default. View location changes require VS Code reload due to platform limitations.
+
 ### Testing
 
 Tests are located in `src/test/` and use Mocha with VS Code's extension testing framework. Run tests with `npm test` which will launch a new VS Code window for integration testing.
@@ -55,3 +57,32 @@ Tests are located in `src/test/` and use Mocha with VS Code's extension testing 
 ### Build System
 
 Uses Webpack for bundling with TypeScript compilation via ts-loader. Note: Current webpack version may have compatibility issues with newer Node.js versions - use `npm run compile` for development testing.
+
+## Dependency Management
+
+### Package Update Process
+- `ncu` (npm-check-updates) - Check for available package updates
+- `npm audit` - Security vulnerability scanning  
+- Update strategy: patch/minor updates first, then major versions individually
+- **Selective upgrade approach**: Compatibility and functionality over latest versions
+- Always test extension functionality after dependency updates
+
+### Critical Dependencies
+- `@types/vscode`: PINNED at 1.50.0 due to VS Code packaging constraint (engines.vscode ^1.50.0)
+- `@types/marked`: REMOVED - marked 16.2.1+ provides its own TypeScript types (deprecated dependency)
+- `eslint`: Stay on 8.x due to plugin ecosystem compatibility issues with 9.x
+- `marked`: Markdown parsing with built-in TypeScript types - test rendering after updates
+- `webpack`: Build system - verify bundling works after updates
+- `typescript`: Language version affects compilation
+
+### Update Validation Checklist
+- [ ] `npm run compile` - TypeScript compilation succeeds
+- [ ] `npm run lint` - Code quality checks pass
+- [ ] `npm test` - All tests pass
+- [ ] Manual testing: Extension loads in VS Code, notes functionality works
+- [ ] Bundle size check: Ensure no significant size increase
+
+### Recent Changes (Last 3 Updates)
+- 2025-09-12: Removed deprecated @types/marked (marked 16.2.1+ has built-in types), documented skip decisions for @types/vscode and eslint
+- 2025-09-12: Added selective dependency upgrade strategy and compatibility constraints documentation
+- 2025-09-12: Major dependency update - TypeScript 4.0.5→5.9.2, ESLint 7.12.1→8.57.1, updated all dev dependencies

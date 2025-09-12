@@ -1,0 +1,158 @@
+{
+  "name": "sidebar-project-md-notes",
+  "displayName": "Sidebar Project MD Notes",
+  "description": "Configurable markdown notes in the sidebar with project-based file storage. Choose Explorer or Source Control placement.",
+  "version": "1.1.0",
+  "publisher": "JimmyStridh",
+  "author": {
+    "email": "sidebar-project-md-notes-vsix@stridh.nu",
+    "name": "Jimmy Stridh",
+    "url": "https://github.com/JimmyStridh"
+  },
+  "license": "GPL-3.0-or-later",
+  "icon": "images/icon.png",
+  "repository": {
+    "url": "https://www.github.com/JimmyStridh/sidebar-markdown-notes",
+    "type": "git"
+  },
+  "keywords": [
+    "markdown",
+    "notes",
+    "view",
+    "sidebar",
+    "github",
+    "flavored",
+    "todo",
+    "checklist",
+    "configurable",
+    "explorer",
+    "source control",
+    "project",
+    "workspace"
+  ],
+  "engines": {
+    "vscode": "^1.50.0"
+  },
+  "extensionKind": [
+    "ui",
+    "workspace"
+  ],
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:sidebar-project-md-notes.resetData",
+    "onCommand:sidebar-project-md-notes.openNotesFile",
+    "onView:sidebarProjectMdNotes.explorer",
+    "onView:sidebarProjectMdNotes.scm"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "sidebarProjectMdNotes.explorer",
+          "name": "Project Notes",
+          "when": "config.sidebar-project-md-notes.viewLocation == 'explorer'"
+        }
+      ],
+      "scm": [
+        {
+          "type": "webview",
+          "id": "sidebarProjectMdNotes.scm",
+          "name": "Project Notes",
+          "when": "config.sidebar-project-md-notes.viewLocation == 'scm'"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "sidebar-project-md-notes.resetData",
+        "category": "Project Notes",
+        "title": "Reset notes"
+      },
+      {
+        "command": "sidebar-project-md-notes.openNotesFile",
+        "category": "Project Notes",
+        "title": "Open notes file",
+        "icon": "$(go-to-file)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "sidebar-project-md-notes.openNotesFile",
+          "group": "navigation@0",
+          "when": "view == sidebarProjectMdNotes.explorer || view == sidebarProjectMdNotes.scm"
+        }
+      ]
+    },
+    "configuration": [
+      {
+        "title": "Project Notes",
+        "properties": {
+          "sidebar-project-md-notes.leftMargin": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether or not a left margin should be added to the main view. To align it with other elements"
+          },
+          "sidebar-project-md-notes.viewLocation": {
+            "type": "string",
+            "enum": [
+              "explorer",
+              "scm"
+            ],
+            "default": "scm",
+            "markdownDescription": "Choose where to display the Project Notes view. **Requires VS Code reload** to take effect.",
+            "enumDescriptions": [
+              "Show in Explorer sidebar",
+              "Show in Source Control sidebar"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "webpack": "webpack --mode development",
+    "webpack-dev": "webpack --mode development --watch",
+    "test-compile": "tsc -p ./",
+    "compile": "tsc -p ./",
+    "lint": "eslint src --ext ts",
+    "watch": "tsc -p ./ --watch",
+    "pretest": "npm run compile && npm run lint",
+    "test": "node ./out/test/runTest.js",
+    "deploy": "npx @vscode/vsce publish",
+    "package": "npx @vscode/vsce package"
+  },
+  "devDependencies": {
+    "@types/glob": "^9.0.0",
+    "@types/marked": "^6.0.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.3.2",
+    "@types/vscode": "^1.104.0",
+    "@typescript-eslint/eslint-plugin": "^8.43.0",
+    "@typescript-eslint/parser": "^8.43.0",
+    "@vscode/vsce": "^3.6.0",
+    "eslint": "^9.35.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "glob": "^11.0.3",
+    "mocha": "^11.7.2",
+    "prettier": "^3.6.2",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.2",
+    "vscode-test": "^1.6.1",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "dompurify": "^3.2.6",
+    "lodash": "^4.17.21",
+    "marked": "^16.2.1"
+  }
+}
